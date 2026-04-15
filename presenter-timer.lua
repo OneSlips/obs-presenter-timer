@@ -312,7 +312,7 @@ function script_properties()
     obs.obs_property_list_add_string(theme_list, "Clean Blue",     "clean-blue")
     obs.obs_property_list_add_string(theme_list, "Custom",         "custom")
 
-    obs.obs_properties_add_int_slider(g4, "font_size", "Font Size (vw)", 5, 40, 1)
+    obs.obs_properties_add_int_slider(g4, "font_size", "Font Size (vw)", 5, 100, 1)
     obs.obs_properties_add_bool(g4, "show_label",   "Show Label")
     obs.obs_properties_add_text(g4, "label_text",    "Label Text", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_bool(g4, "show_progress", "Show Progress Bar")
