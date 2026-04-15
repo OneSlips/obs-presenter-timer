@@ -510,8 +510,10 @@ function render(d) {
     label.textContent = d.labelText || '';
     label.style.display = d.showLabel ? '' : 'none';
 
-    // -- Timer text --
-    timer.textContent = d.time;
+    // -- Timer text (only set from state when not interpolating) --
+    if (!d.running || d.paused) {
+        timer.textContent = d.time;
+    }
 
     // -- Phase colours --
     const phase = d.phase;
