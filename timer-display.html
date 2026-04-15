@@ -90,9 +90,6 @@ body {
    END MESSAGE
    =================================================================== */
 #end-message {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
     font-size: 10vw;
     font-weight: 800;
     letter-spacing: 0.1em;
@@ -100,6 +97,8 @@ body {
     color: var(--color-overtime);
     text-shadow: var(--glow);
     opacity: 0;
+    height: 0;
+    overflow: visible;
     pointer-events: none;
     transition: opacity 0.4s ease;
     white-space: nowrap;
@@ -107,10 +106,8 @@ body {
 
 #end-message.visible {
     opacity: 1;
-}
-
-#end-message.visible ~ #timer {
-    opacity: 0;
+    height: auto;
+    margin-bottom: 1vh;
 }
 
 /* ===================================================================
@@ -167,14 +164,15 @@ body {
     20%, 40%, 60%, 80%      { transform: translateX(2px); }
 }
 
-.flash-danger #flash-overlay {
-    background: var(--color-danger);
-    animation: flash-danger 0.5s ease-in-out infinite;
+/* Flash classes applied via JS — single flash per trigger */
+.flash-once #flash-overlay {
+    animation: flash-once 0.4s ease-in-out forwards;
 }
 
-.flash-overtime #flash-overlay {
-    background: var(--color-overtime);
-    animation: flash-overtime 0.8s ease-in-out infinite;
+@keyframes flash-once {
+    0%   { opacity: 0; }
+    30%  { opacity: 0.7; }
+    100% { opacity: 0; }
 }
 
 .pulse #timer {
@@ -362,8 +360,8 @@ body {
 
 <div id="container">
     <div id="label">TIME REMAINING</div>
-    <div id="timer">00:00</div>
     <div id="end-message"></div>
+    <div id="timer">00:00</div>
 
     <div id="progress-wrap">
         <div id="progress-bar"></div>
@@ -529,19 +527,14 @@ function render(d) {
     }
 
     // -- Animations --
-    body.classList.remove('flash-danger', 'flash-overtime', 'pulse', 'paused');
+    body.classList.remove('pulse', 'paused');
 
     if (d.paused) {
         body.classList.add('paused');
     }
 
-    if (phase === 'danger' && d.flashOnDanger && d.running && !d.paused) {
-        body.classList.add('flash-danger');
-    }
-
-    if (phase === 'overtime' && d.flashOnOvertime && d.running && !d.paused) {
-        body.classList.add('flash-overtime');
-    }
+    // Flash logic: burst of 3 on phase enter, then 1 flash every 10s
+    handleFlash(phase, d);
 
     if (phase === 'danger' && d.pulseLastTen && d.remaining <= 10 && d.remaining > 0 && d.running && !d.paused) {
         body.classList.add('pulse');
@@ -551,14 +544,12 @@ function render(d) {
     if (d.showEndMessage && phase === 'overtime' && !d.countUp) {
         endMsg.textContent = d.endMessage || "TIME'S UP";
         endMsg.classList.add('visible');
-        timer.style.opacity = '0.25';
         timer.style.fontSize = '8vw';
-        timer.style.marginTop = '6vh';
+        timer.style.opacity = '0.6';
     } else {
         endMsg.classList.remove('visible');
         timer.style.opacity = '';
         timer.style.fontSize = '';
-        timer.style.marginTop = '';
     }
 
     // -- Progress bar --
@@ -573,6 +564,73 @@ function render(d) {
         progressBar.style.backgroundColor = style.getPropertyValue('--color-warning').trim();
     } else {
         progressBar.style.backgroundColor = '';
+    }
+}
+
+// ====================================================================
+// FLASH CONTROLLER
+// ====================================================================
+let flashPhase = null;       // current phase that triggered flashing
+let flashBurstCount = 0;     // how many burst flashes remaining
+let flashInterval = null;    // periodic flash interval
+let flashBurstTimer = null;  // burst sequence timer
+
+function triggerOneFlash(color) {
+    const overlay = document.getElementById('flash-overlay');
+    const body = document.body;
+    overlay.style.background = color;
+    body.classList.remove('flash-once');
+    // Force reflow to restart animation
+    void body.offsetWidth;
+    body.classList.add('flash-once');
+    setTimeout(() => body.classList.remove('flash-once'), 450);
+}
+
+function startFlashBurst(color, count, then10s) {
+    stopFlashing();
+    flashBurstCount = count;
+    flashBurstTimer = setInterval(() => {
+        if (flashBurstCount > 0) {
+            triggerOneFlash(color);
+            flashBurstCount--;
+        } else {
+            clearInterval(flashBurstTimer);
+            flashBurstTimer = null;
+            if (then10s) {
+                // Periodic flash every 10 seconds
+                flashInterval = setInterval(() => triggerOneFlash(color), 10000);
+            }
+        }
+    }, 500);
+}
+
+function stopFlashing() {
+    if (flashBurstTimer) { clearInterval(flashBurstTimer); flashBurstTimer = null; }
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
+    document.body.classList.remove('flash-once');
+}
+
+function handleFlash(phase, d) {
+    const shouldFlash =
+        (phase === 'danger' && d.flashOnDanger && d.running && !d.paused) ||
+        (phase === 'overtime' && d.flashOnOvertime && d.running && !d.paused);
+
+    if (!shouldFlash) {
+        if (flashPhase !== null) {
+            stopFlashing();
+            flashPhase = null;
+        }
+        return;
+    }
+
+    // New phase entered — start burst + periodic
+    if (flashPhase !== phase) {
+        flashPhase = phase;
+        const style = getComputedStyle(document.body);
+        const color = phase === 'overtime'
+            ? style.getPropertyValue('--color-overtime').trim()
+            : style.getPropertyValue('--color-danger').trim();
+        startFlashBurst(color, 3, true);
     }
 }
 
