@@ -77,6 +77,9 @@ local function format_time(secs)
     local sign = negative and "-" or ""
     if settings_data.minutes_only then
         local total_m = math.floor(abs_secs / 60)
+        if total_m == 0 then
+            return string.format("%s%d", sign, s)
+        end
         return string.format("%s%d", sign, total_m)
     elseif settings_data.show_hours or h > 0 then
         return string.format("%s%d:%02d:%02d", sign, h, m, s)

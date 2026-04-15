@@ -442,6 +442,9 @@ function formatTime(secs, showHours, minutesOnly) {
 
     if (minutesOnly) {
         const totalM = Math.floor(abs / 60);
+        if (totalM === 0) {
+            return sign + (abs % 60);
+        }
         return sign + totalM;
     }
     if (showHours || h > 0) {
