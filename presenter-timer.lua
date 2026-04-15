@@ -1,5 +1,7 @@
 -- Presenter Timer for OBS Studio
 -- A fully customisable stage timer with presets, manual time, and visual alerts
+-- By Roman Alurkoff
+-- https://github.com/OneSlips/obs-presenter-timer
 -- https://obsproject.com/
 
 obs = obslua
@@ -248,6 +250,7 @@ end
 function script_description()
     return [[
 <h2>🎤 Presenter Timer</h2>
+<p>By <b>Roman Alurkoff</b></p>
 <p>A polished, fully customisable stage timer for live presentations.</p>
 <p>Add <b>timer-display.html</b> as a <b>Browser Source</b> in your scene.</p>
 <hr>

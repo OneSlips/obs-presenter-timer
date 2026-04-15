@@ -1,5 +1,7 @@
 # 🎤 Presenter Timer for OBS Studio
 
+**Created by Roman Alurkoff** · [GitHub](https://github.com/OneSlips)
+
 A polished, fully customisable stage timer for live presentations. Control the countdown from OBS while displaying a beautiful full-screen timer to your presenters via a monitor, projector, or NDI feed.
 
 ![Timer Preview](https://img.shields.io/badge/OBS-28%2B-blue?style=flat-square) ![Lua](https://img.shields.io/badge/Script-Lua-blue?style=flat-square) ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
@@ -238,4 +240,4 @@ If using the **obs-ndi** plugin, you can send the timer scene to any NDI-capable
 
 ## 📄 License
 
-MIT License — free for personal and commercial use.
+MIT License © Roman Alurkoff — free for personal and commercial use.
