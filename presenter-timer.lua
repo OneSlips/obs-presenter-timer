@@ -75,7 +75,10 @@ local function format_time(secs)
     local m = math.floor((abs_secs % 3600) / 60)
     local s = abs_secs % 60
     local sign = negative and "-" or ""
-    if settings_data.show_hours or h > 0 then
+    if settings_data.minutes_only then
+        local total_m = math.floor(abs_secs / 60)
+        return string.format("%s%d min", sign, total_m)
+    elseif settings_data.show_hours or h > 0 then
         return string.format("%s%d:%02d:%02d", sign, h, m, s)
     else
         return string.format("%s%02d:%02d", sign, m, s)
@@ -113,7 +116,7 @@ local function write_state()
         '"colorNormal":"%s","colorWarning":"%s","colorDanger":"%s","colorOvertime":"%s","colorBg":"%s",'..
         '"flashOnDanger":%s,"flashOnOvertime":%s,"allowNegative":%s,'..
         '"pulseLastTen":%s,"endMessage":"%s","showEndMessage":%s,'..
-        '"showHours":%s,"countUp":%s,"timestamp":%d}',
+        '"showHours":%s,"minutesOnly":%s,"countUp":%s,"timestamp":%d}',
         format_time(remaining),
         remaining,
         total_seconds,
@@ -139,6 +142,7 @@ local function write_state()
         settings_data.end_message,
         tostring(settings_data.show_end_message),
         tostring(settings_data.show_hours),
+        tostring(settings_data.minutes_only),
         tostring(settings_data.count_up),
         os.time()
     )
@@ -313,6 +317,7 @@ function script_properties()
     obs.obs_properties_add_text(g4, "label_text",    "Label Text", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_bool(g4, "show_progress", "Show Progress Bar")
     obs.obs_properties_add_bool(g4, "show_hours",    "Always Show Hours")
+    obs.obs_properties_add_bool(g4, "minutes_only",  "Show Minutes Only (no seconds)")
     obs.obs_properties_add_group(props, "grp_theme", "🎨 Appearance", obs.OBS_GROUP_NORMAL, g4)
 
     -- == COLOURS ==
@@ -359,6 +364,7 @@ function script_update(settings)
     settings_data.label_text      = obs.obs_data_get_string(settings, "label_text")
     settings_data.show_progress   = obs.obs_data_get_bool(settings, "show_progress")
     settings_data.show_hours      = obs.obs_data_get_bool(settings, "show_hours")
+    settings_data.minutes_only    = obs.obs_data_get_bool(settings, "minutes_only")
 
     settings_data.color_normal    = obs_color_to_hex(obs.obs_data_get_int(settings, "color_normal_int"))
     settings_data.color_warning   = obs_color_to_hex(obs.obs_data_get_int(settings, "color_warning_int"))
@@ -390,6 +396,7 @@ function script_defaults(settings)
     obs.obs_data_set_default_string(settings, "label_text",   "TIME REMAINING")
     obs.obs_data_set_default_bool(settings,   "show_progress", true)
     obs.obs_data_set_default_bool(settings,   "show_hours",    false)
+    obs.obs_data_set_default_bool(settings,   "minutes_only",  false)
 
     obs.obs_data_set_default_int(settings,    "color_normal_int",   0xFFFFFFFF)
     obs.obs_data_set_default_int(settings,    "color_warning_int",  0xFF00B8FF)

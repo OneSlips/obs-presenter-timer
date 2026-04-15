@@ -425,13 +425,13 @@ function interpolateTime() {
     const remaining = state.countUp ? currentElapsed : state.total - currentElapsed;
 
     // Update time display with interpolated value
-    document.getElementById('timer').textContent = formatTime(remaining, state.showHours);
+    document.getElementById('timer').textContent = formatTime(remaining, state.showHours, state.minutesOnly);
 
     // Update phase classes based on interpolated remaining
     updatePhaseFromRemaining(remaining);
 }
 
-function formatTime(secs, showHours) {
+function formatTime(secs, showHours, minutesOnly) {
     const negative = secs < 0;
     const abs = Math.abs(Math.floor(secs));
     const h = Math.floor(abs / 3600);
@@ -440,6 +440,10 @@ function formatTime(secs, showHours) {
     const sign = negative ? '-' : '';
     const pad = n => String(n).padStart(2, '0');
 
+    if (minutesOnly) {
+        const totalM = Math.floor(abs / 60);
+        return sign + totalM + ' min';
+    }
     if (showHours || h > 0) {
         return sign + h + ':' + pad(m) + ':' + pad(s);
     }
