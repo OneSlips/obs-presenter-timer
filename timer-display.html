@@ -90,7 +90,6 @@ body {
    END MESSAGE
    =================================================================== */
 #end-message {
-    font-size: 10vw;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -102,6 +101,9 @@ body {
     pointer-events: none;
     transition: opacity 0.4s ease;
     white-space: nowrap;
+    width: 100%;
+    text-align: center;
+    padding: 0 4vw;
 }
 
 #end-message.visible {
@@ -544,10 +546,12 @@ function render(d) {
     if (d.showEndMessage && phase === 'overtime' && !d.countUp) {
         endMsg.textContent = d.endMessage || "TIME'S UP";
         endMsg.classList.add('visible');
+        fitEndMessage();
         timer.style.fontSize = '8vw';
         timer.style.opacity = '0.6';
     } else {
         endMsg.classList.remove('visible');
+        endMsg.style.fontSize = '';
         timer.style.opacity = '';
         timer.style.fontSize = '';
     }
@@ -566,6 +570,35 @@ function render(d) {
         progressBar.style.backgroundColor = '';
     }
 }
+
+// ====================================================================
+// FIT END MESSAGE TO WIDTH
+// ====================================================================
+function fitEndMessage() {
+    const el = document.getElementById('end-message');
+    if (!el.classList.contains('visible')) return;
+    // Available width = container width minus padding (4vw each side)
+    const container = document.getElementById('container');
+    const availableWidth = container.clientWidth * 0.92; // 4% padding each side
+    // Binary search for the right font size
+    let lo = 1, hi = 50; // vw units
+    el.style.fontSize = hi + 'vw';
+    while (hi - lo > 0.5) {
+        const mid = (lo + hi) / 2;
+        el.style.fontSize = mid + 'vw';
+        if (el.scrollWidth > availableWidth) {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    el.style.fontSize = lo + 'vw';
+}
+
+window.addEventListener('resize', () => {
+    const el = document.getElementById('end-message');
+    if (el.classList.contains('visible')) fitEndMessage();
+});
 
 // ====================================================================
 // FLASH CONTROLLER
