@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presenter Timer</title>
+<style>
+/* ===================================================================
+   BASE RESET & LAYOUT
+   =================================================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.6s ease;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+}
+
+/* ===================================================================
+   CSS VARIABLES (defaults — overridden by themes & state)
+   =================================================================== */
+:root {
+    --bg:             #0A0A0F;
+    --color:          #FFFFFF;
+    --color-warning:  #FFB800;
+    --color-danger:   #FF3333;
+    --color-overtime: #FF0044;
+    --accent:         #FFFFFF;
+    --progress-bg:    rgba(255,255,255,0.08);
+    --progress-fill:  rgba(255,255,255,0.25);
+    --glow:           none;
+    --font-size:      20vw;
+    --label-size:     2vw;
+}
+
+/* ===================================================================
+   CONTAINER
+   =================================================================== */
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2vh 4vw;
+    position: relative;
+}
+
+/* ===================================================================
+   LABEL
+   =================================================================== */
+#label {
+    font-size: var(--label-size);
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.6;
+    margin-bottom: 1vh;
+    transition: color 0.4s ease, opacity 0.4s ease;
+}
+
+/* ===================================================================
+   TIMER DISPLAY
+   =================================================================== */
+#timer {
+    font-size: var(--font-size);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--color);
+    text-shadow: var(--glow);
+    transition: color 0.4s ease, text-shadow 0.4s ease, transform 0.15s ease;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* ===================================================================
+   END MESSAGE
+   =================================================================== */
+#end-message {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10vw;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-overtime);
+    text-shadow: var(--glow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    white-space: nowrap;
+}
+
+#end-message.visible {
+    opacity: 1;
+}
+
+#end-message.visible ~ #timer {
+    opacity: 0;
+}
+
+/* ===================================================================
+   PROGRESS BAR
+   =================================================================== */
+#progress-wrap {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 6px;
+    background: var(--progress-bg);
+    overflow: hidden;
+}
+
+#progress-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    transition: transform 0.3s linear, background-color 0.4s ease;
+}
+
+/* ===================================================================
+   FLASH OVERLAY
+   =================================================================== */
+#flash-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+}
+
+/* ===================================================================
+   ANIMATIONS
+   =================================================================== */
+@keyframes flash-danger {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
+}
+
+@keyframes flash-overtime {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80%      { transform: translateX(2px); }
+}
+
+.flash-danger #flash-overlay {
+    background: var(--color-danger);
+    animation: flash-danger 0.5s ease-in-out infinite;
+}
+
+.flash-overtime #flash-overlay {
+    background: var(--color-overtime);
+    animation: flash-overtime 0.8s ease-in-out infinite;
+}
+
+.pulse #timer {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.shake #timer {
+    animation: shake 0.4s ease-in-out;
+}
+
+/* ===================================================================
+   PAUSED STATE
+   =================================================================== */
+.paused #timer {
+    animation: blink-pause 1s step-end infinite;
+}
+
+@keyframes blink-pause {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.3; }
+}
+
+/* ===================================================================
+   THEME: MODERN DARK (default)
+   =================================================================== */
+.theme-modern-dark {
+    --bg: #0A0A0F;
+    --color: #FFFFFF;
+    --accent: #FFFFFF;
+    --progress-bg: rgba(255,255,255,0.06);
+    --progress-fill: rgba(255,255,255,0.2);
+    --glow: 0 0 40px rgba(255,255,255,0.08);
+    --label-size: 2vw;
+}
+
+/* ===================================================================
+   THEME: NEON GLOW
+   =================================================================== */
+.theme-neon-glow {
+    --bg: #050510;
+    --color: #00F0FF;
+    --accent: #00F0FF;
+    --color-warning: #FFEE00;
+    --color-danger: #FF2060;
+    --color-overtime: #FF0040;
+    --progress-bg: rgba(0,240,255,0.08);
+    --glow: 0 0 20px rgba(0,240,255,0.4), 0 0 60px rgba(0,240,255,0.15), 0 0 120px rgba(0,240,255,0.05);
+    --label-size: 2vw;
+}
+
+.theme-neon-glow #timer {
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* ===================================================================
+   THEME: MINIMAL LIGHT
+   =================================================================== */
+.theme-minimal-light {
+    --bg: #F5F5F5;
+    --color: #1A1A2E;
+    --accent: #888;
+    --color-warning: #E6A800;
+    --color-danger: #D32F2F;
+    --color-overtime: #B71C1C;
+    --progress-bg: rgba(0,0,0,0.06);
+    --glow: none;
+    --label-size: 1.8vw;
+}
+
+.theme-minimal-light #timer {
+    font-weight: 300;
+}
+
+.theme-minimal-light #label {
+    opacity: 0.4;
+}
+
+/* ===================================================================
+   THEME: BROADCAST RED
+   =================================================================== */
+.theme-broadcast-red {
+    --bg: #1A0000;
+    --color: #FF1744;
+    --accent: #FF1744;
+    --color-warning: #FF9100;
+    --color-danger: #FFEB3B;
+    --color-overtime: #FFFFFF;
+    --progress-bg: rgba(255,23,68,0.1);
+    --glow: 0 0 30px rgba(255,23,68,0.3), 0 0 80px rgba(255,23,68,0.1);
+    --label-size: 2.2vw;
+}
+
+.theme-broadcast-red #timer {
+    font-family: 'Impact', 'Arial Narrow', sans-serif;
+    letter-spacing: 0.05em;
+}
+
+/* ===================================================================
+   THEME: ELEGANT GOLD
+   =================================================================== */
+.theme-elegant-gold {
+    --bg: #0D0D0D;
+    --color: #D4AF37;
+    --accent: #D4AF37;
+    --color-warning: #FFC107;
+    --color-danger: #FF6B35;
+    --color-overtime: #FF1744;
+    --progress-bg: rgba(212,175,55,0.08);
+    --glow: 0 0 30px rgba(212,175,55,0.2);
+    --label-size: 2vw;
+}
+
+.theme-elegant-gold #timer {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-weight: 400;
+}
+
+.theme-elegant-gold #label {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    letter-spacing: 0.5em;
+}
+
+/* ===================================================================
+   THEME: CYBERPUNK
+   =================================================================== */
+.theme-cyberpunk {
+    --bg: #0a001a;
+    --color: #f700ff;
+    --accent: #f700ff;
+    --color-warning: #ffea00;
+    --color-danger: #ff1744;
+    --color-overtime: #ff0040;
+    --progress-bg: rgba(247,0,255,0.1);
+    --glow: 0 0 10px #f700ff, 0 0 40px rgba(247,0,255,0.4), 0 0 100px rgba(247,0,255,0.1);
+    --label-size: 2vw;
+}
+
+.theme-cyberpunk #timer {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 900;
+}
+
+.theme-cyberpunk::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(247,0,255,0.03) 2px,
+        rgba(247,0,255,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 50;
+}
+
+/* ===================================================================
+   THEME: CLEAN BLUE
+   =================================================================== */
+.theme-clean-blue {
+    --bg: #0B1929;
+    --color: #64B5F6;
+    --accent: #64B5F6;
+    --color-warning: #FFB74D;
+    --color-danger: #EF5350;
+    --color-overtime: #FF1744;
+    --progress-bg: rgba(100,181,246,0.08);
+    --glow: 0 0 20px rgba(100,181,246,0.2);
+    --label-size: 2vw;
+}
+
+/* ===================================================================
+   THEME: CUSTOM
+   =================================================================== */
+.theme-custom {
+    --label-size: 2vw;
+}
+
+</style>
+</head>
+<body class="theme-modern-dark">
+
+<div id="flash-overlay"></div>
+
+<div id="container">
+    <div id="label">TIME REMAINING</div>
+    <div id="timer">00:00</div>
+    <div id="end-message"></div>
+
+    <div id="progress-wrap">
+        <div id="progress-bar"></div>
+    </div>
+</div>
+
+<script>
+// ====================================================================
+// STATE POLLING
+// ====================================================================
+const POLL_INTERVAL = 150; // ms
+let state = null;
+let lastTimestamp = 0;
+let pollErrorCount = 0;
+
+// Determine the path to the JSON state file
+// The HTML and JSON must be in the same directory
+const stateUrl = 'timer-state.json';
+
+async function fetchState() {
+    try {
+        const resp = await fetch(stateUrl + '?_=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        pollErrorCount = 0;
+
+        if (data.timestamp !== lastTimestamp) {
+            lastTimestamp = data.timestamp;
+            state = data;
+            render(data);
+        }
+    } catch (e) {
+        pollErrorCount++;
+        // After many failures show a placeholder
+        if (pollErrorCount > 20 && !state) {
+            document.getElementById('timer').textContent = '--:--';
+        }
+    }
+}
+
+// ====================================================================
+// CLIENT-SIDE INTERPOLATION
+// ====================================================================
+let clientStart = null;
+let clientBaseElapsed = 0;
+
+function interpolateTime() {
+    if (!state) return;
+    if (!state.running || state.paused) return;
+
+    const now = performance.now();
+    if (clientStart === null) {
+        clientStart = now;
+        clientBaseElapsed = state.elapsed;
+    }
+
+    const dtSec = Math.floor((now - clientStart) / 1000);
+    const currentElapsed = clientBaseElapsed + dtSec;
+    const remaining = state.countUp ? currentElapsed : state.total - currentElapsed;
+
+    // Update time display with interpolated value
+    document.getElementById('timer').textContent = formatTime(remaining, state.showHours);
+
+    // Update phase classes based on interpolated remaining
+    updatePhaseFromRemaining(remaining);
+}
+
+function formatTime(secs, showHours) {
+    const negative = secs < 0;
+    const abs = Math.abs(Math.floor(secs));
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    const s = abs % 60;
+    const sign = negative ? '-' : '';
+    const pad = n => String(n).padStart(2, '0');
+
+    if (showHours || h > 0) {
+        return sign + h + ':' + pad(m) + ':' + pad(s);
+    }
+    return sign + pad(m) + ':' + pad(s);
+}
+
+function updatePhaseFromRemaining(remaining) {
+    // This is handled in render via the state phase from the server
+    // Interpolation just tracks visual smoothness
+}
+
+// ====================================================================
+// RENDER
+// ====================================================================
+function render(d) {
+    const body = document.body;
+    const timer = document.getElementById('timer');
+    const label = document.getElementById('label');
+    const endMsg = document.getElementById('end-message');
+    const progressBar = document.getElementById('progress-bar');
+    const progressWrap = document.getElementById('progress-wrap');
+
+    // -- Reset interpolation on state change --
+    if (d.running && !d.paused) {
+        clientStart = performance.now();
+        clientBaseElapsed = d.elapsed;
+    } else {
+        clientStart = null;
+    }
+
+    // -- Theme --
+    body.className = ''; // clear
+    if (d.theme === 'custom') {
+        body.classList.add('theme-custom');
+        document.documentElement.style.setProperty('--bg', d.colorBg);
+        document.documentElement.style.setProperty('--color', d.colorNormal);
+        document.documentElement.style.setProperty('--accent', d.colorNormal);
+        document.documentElement.style.setProperty('--color-warning', d.colorWarning);
+        document.documentElement.style.setProperty('--color-danger', d.colorDanger);
+        document.documentElement.style.setProperty('--color-overtime', d.colorOvertime);
+    } else {
+        body.classList.add('theme-' + d.theme);
+        // Reset custom props
+        const root = document.documentElement.style;
+        root.removeProperty('--bg');
+        root.removeProperty('--color');
+        root.removeProperty('--accent');
+        root.removeProperty('--color-warning');
+        root.removeProperty('--color-danger');
+        root.removeProperty('--color-overtime');
+    }
+
+    // -- Font size --
+    document.documentElement.style.setProperty('--font-size', d.fontSize + 'vw');
+
+    // -- Background --
+    const computedBg = getComputedStyle(body).getPropertyValue('--bg').trim();
+    body.style.backgroundColor = computedBg;
+
+    // -- Label --
+    label.textContent = d.labelText || '';
+    label.style.display = d.showLabel ? '' : 'none';
+
+    // -- Timer text --
+    timer.textContent = d.time;
+
+    // -- Phase colours --
+    const phase = d.phase;
+    const style = getComputedStyle(body);
+
+    if (phase === 'overtime') {
+        timer.style.color = style.getPropertyValue('--color-overtime').trim();
+        label.style.color = style.getPropertyValue('--color-overtime').trim();
+        label.style.opacity = '0.8';
+    } else if (phase === 'danger') {
+        timer.style.color = style.getPropertyValue('--color-danger').trim();
+        label.style.color = style.getPropertyValue('--color-danger').trim();
+        label.style.opacity = '0.8';
+    } else if (phase === 'warning') {
+        timer.style.color = style.getPropertyValue('--color-warning').trim();
+        label.style.color = style.getPropertyValue('--color-warning').trim();
+        label.style.opacity = '0.7';
+    } else {
+        timer.style.color = '';
+        label.style.color = '';
+        label.style.opacity = '';
+    }
+
+    // -- Animations --
+    body.classList.remove('flash-danger', 'flash-overtime', 'pulse', 'paused');
+
+    if (d.paused) {
+        body.classList.add('paused');
+    }
+
+    if (phase === 'danger' && d.flashOnDanger && d.running && !d.paused) {
+        body.classList.add('flash-danger');
+    }
+
+    if (phase === 'overtime' && d.flashOnOvertime && d.running && !d.paused) {
+        body.classList.add('flash-overtime');
+    }
+
+    if (phase === 'danger' && d.pulseLastTen && d.remaining <= 10 && d.remaining > 0 && d.running && !d.paused) {
+        body.classList.add('pulse');
+    }
+
+    // -- End message --
+    if (d.showEndMessage && phase === 'overtime' && !d.countUp) {
+        endMsg.textContent = d.endMessage || "TIME'S UP";
+        endMsg.classList.add('visible');
+        timer.style.opacity = '0.25';
+        timer.style.fontSize = '8vw';
+        timer.style.marginTop = '6vh';
+    } else {
+        endMsg.classList.remove('visible');
+        timer.style.opacity = '';
+        timer.style.fontSize = '';
+        timer.style.marginTop = '';
+    }
+
+    // -- Progress bar --
+    progressWrap.style.display = d.showProgress ? '' : 'none';
+    progressBar.style.transform = 'scaleX(' + Math.max(0, Math.min(1, d.progress)) + ')';
+
+    if (phase === 'overtime') {
+        progressBar.style.backgroundColor = style.getPropertyValue('--color-overtime').trim();
+    } else if (phase === 'danger') {
+        progressBar.style.backgroundColor = style.getPropertyValue('--color-danger').trim();
+    } else if (phase === 'warning') {
+        progressBar.style.backgroundColor = style.getPropertyValue('--color-warning').trim();
+    } else {
+        progressBar.style.backgroundColor = '';
+    }
+}
+
+// ====================================================================
+// MAIN LOOP
+// ====================================================================
+setInterval(fetchState, POLL_INTERVAL);
+
+// Client-side interpolation for smooth display
+setInterval(() => {
+    if (state && state.running && !state.paused) {
+        interpolateTime();
+    }
+}, 100);
+
+// Initial fetch
+fetchState();
+
+</script>
+</body>
+</html>
